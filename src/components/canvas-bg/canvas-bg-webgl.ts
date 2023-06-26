@@ -1,97 +1,89 @@
-import vsShader from '../../assets/shaders/vertex.glsl'
-import fsShader from '../../assets/shaders/fragment.glsl'
+import vsShader from "../../assets/shaders/vertex.glsl";
+import fsShader from "../../assets/shaders/fragment.glsl";
 
-export const initCanvasBgWebGL = ({ canvas }: { canvas: HTMLCanvasElement }) => {
-    const gl = canvas.getContext("webgl");
+export const initCanvasBgWebGL = ({
+  canvas,
+}: {
+  canvas: HTMLCanvasElement;
+}) => {
+  let render: any;
+  const gl = canvas.getContext("webgl");
+
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+
+  if (!gl) {
+    console.log("Failed to get the rendering context for WebGL");
+    return;
+  }
+
+  let currentTime = 0;
+  let previousTime = 0;
+
+  if (render) {
+    cancelAnimationFrame(render);
+  }
+
+  // Render loop
+  render = () => {
     if (!gl) {
-        console.log("Failed to get the rendering context for WebGL");
-        return;
+      console.log("Failed to get the rendering context for WebGL");
+      return;
     }
 
     const vs = vsShader;
     const fs = fsShader;
-    if (!initShaders(gl, vs, fs)) {
-        console.log('Failed to intialize shaders.');
-        return;
-    }
+    // Create shaders, program, and set up attributes
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    if (!vertexShader) return;
+    gl.shaderSource(vertexShader, vs);
+    gl.compileShader(vertexShader);
 
-    const n = initVertexBuffers(gl);
-    if (n < 0) {
-        console.log('Failed to set the positions of the vertices');
-        return;
-    }
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    if (!fragmentShader) return;
+    gl.shaderSource(fragmentShader, fs);
+    gl.compileShader(fragmentShader);
 
+    const shaderProgram = gl.createProgram();
+    if (!shaderProgram) return;
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+
+    const positionAttributeLocation = gl.getAttribLocation(
+      shaderProgram,
+      "position"
+    );
+    gl.enableVertexAttribArray(positionAttributeLocation);
+    const vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    const positions = [
+      -1.0, -1.0, 0.0, 1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, 1.0, 0.0,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
+
+    // Set up time uniform
+    const timeUniformLocation = gl.getUniformLocation(shaderProgram, "time");
+
+    gl.uniform1f(timeUniformLocation, currentTime);
+    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
 
-    gl.drawArrays(gl.TRIANGLES, 0, n);
+    requestAnimationFrame((now) => {
+      currentTime = now / 1000.0;
+
+      // console.log(currentTime);
+
+      previousTime = now;
+
+      // render();
+    });
+  };
+
+  render();
 };
-
-function initVertexBuffers(gl: WebGLRenderingContext) {
-    const dim = 3;
-    const vertices = new Float32Array([
-        0, 0.5, 0,  // Vertice #1
-        -0.5, -0.5, 0, // Vertice #2
-        0.5, -0.5, 0 // Vertice #3
-    ]);
-
-    const vertexBuffer = gl.createBuffer();
-    if (!vertexBuffer) {
-        console.log('Failed to create the buffer object');
-        return -1;
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-    // @ts-ignore
-    const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
-    if (a_Position < 0) {
-        console.log('Failed to get the storage location of a_Position');
-        return -1;
-    }
-    gl.vertexAttribPointer(a_Position, dim, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(a_Position);
-
-    return vertices.length / dim;
-}
-
-function initShaders(gl: WebGLRenderingContext, vs_source: string, fs_source: string) {
-    const vertexShader = makeShader(gl, vs_source, gl.VERTEX_SHADER);
-    const fragmentShader = makeShader(gl, fs_source, gl.FRAGMENT_SHADER);
-
-    const glProgram = gl.createProgram();
-
-    if (!glProgram || !vertexShader || !fragmentShader) return;
-
-    gl.attachShader(glProgram, vertexShader);
-    gl.attachShader(glProgram, fragmentShader);
-
-    gl.linkProgram(glProgram);
-
-    if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
-        console.log("Unable to initialize the shader program");
-        return false;
-    }
-
-    // Use program
-    gl.useProgram(glProgram);
-    // @ts-ignore
-    gl.program = glProgram;
-
-    return true;
-}
-
-function makeShader(gl: WebGLRenderingContext, src: string, type: number) {
-    const shader = gl.createShader(type);
-
-    if (!shader) return;
-    gl.shaderSource(shader, src);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.log("Error compiling shader: " + gl.getShaderInfoLog(shader));
-        return;
-    }
-
-    return shader;
-}

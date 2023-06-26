@@ -1,0 +1,54 @@
+.content {
+    padding: 16px;
+    background-color: rgba(255,255,255,0.8)
+}
+
+.canvas-bg {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    z-index: -1;
+}
+
+canvas {
+    height: 100%;
+    width: 100%;
+}
+
+.city-form {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.weather-list {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.weather-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.weather-item-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.weather-item-text {
+    margin-right: 8px;
+}
+
+.weather-item-button {
+    padding: 0 8px;
+}
